@@ -41,6 +41,21 @@ Design is synthesized from two existing Ruby adapters:
   (`version`, `ssr_url`, `component_path_resolver`, etc.) gets registered as a container component
   (`"inertia.config"`), consumed via `include Deps["inertia.config"]` — the Hanami equivalent of
   `InertiaRails.configure`.
+  - Verified against the installed `hanami` (3.0.2) / `dry-system` (1.2.5) / `dry-configurable` (1.4.0)
+    gem source (Hanami's own built-in providers, e.g. `Hanami::Providers::DB`, `Hanami::Providers::I18n`,
+    follow the same pattern):
+    - **Namespacing is not automatic.** `register("config", obj)` inside a provider named `:inertia`
+      only resolves to container key `"inertia.config"` when the provider is registered with
+      `namespace: true` (`Hanami.app.register_provider(:inertia, namespace: true, source: InertiaHanami::Provider)`).
+      Without it, the key would just be `"config"`.
+    - **dry-configurable 1.4 does not delegate setting names onto the including instance.** A class that
+      `include Dry::Configurable` and defines `setting :version` does *not* get an instance method
+      `#version` — settings are only reachable via `#config` (e.g. `instance.config.version`). Confirmed
+      empirically (`instance.respond_to?(:version) # => false`) and in every built-in Hanami provider,
+      which reads its own settings as `config.foo`, never `self.foo`.
+    - Consequence for this doc's literal usage below (`Hanami.app["inertia.config"].version`) to hold with
+      no extra `.config.` hop: the provider must register the `Dry::Configurable::Config` object itself —
+      `register("config", InertiaHanami::Configuration.new.config)` — not the `Configuration` instance.
 - `config.middleware.use` in `config/app.rb` registers Rack middleware app-wide; per-route middleware is also
   supported via `use` inside route `scope` blocks.
 - `hanami-assets` compiles to `public/assets/` with a manifest `assets.json` (source → hashed filename) — this
@@ -54,8 +69,10 @@ Design is synthesized from two existing Ruby adapters:
 ```
 lib/inertia_hanami.rb                       # entrypoint, requires + configure block
 lib/inertia_hanami/version.rb
-lib/inertia_hanami/configuration.rb          # Configuration object (version, ssr, root_view, component_path_resolver, root_dom_id...)
-lib/inertia_hanami/provider.rb               # Hanami::Provider registering "inertia.config" in the container
+lib/inertia_hanami/configuration.rb          # `include Dry::Configurable`; settings (version, ssr, root_view,
+                                              #   component_path_resolver, root_dom_id...) read via #config, dry-configurable 1.4 style
+lib/inertia_hanami/provider.rb               # Hanami::Provider::Source; registers Configuration.new.config as "config" under
+                                              #   `register_provider(:inertia, namespace: true, ...)` -> resolves to "inertia.config"
 lib/inertia_hanami/props.rb                  # Optional/Defer/Merge/Always/Once wrappers, Ruby Data-based (port from inertia-rage)
 lib/inertia_hanami/prop_evaluator.rb         # resolves Proc/BaseProp props against action instance
 lib/inertia_hanami/protocol_builder.rb       # partial-reload resolution: only/except/reset/dot-paths (port+adapt from inertia-rage)
