@@ -7,6 +7,7 @@ require_relative "inertia_hanami/props"
 require_relative "inertia_hanami/prop_evaluator"
 require_relative "inertia_hanami/protocol_builder"
 require_relative "inertia_hanami/request_context"
+require_relative "inertia_hanami/renderer"
 
 module InertiaHanami
   class Error < StandardError; end
