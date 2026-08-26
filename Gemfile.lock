@@ -2,6 +2,7 @@ PATH
   remote: .
   specs:
     inertia_hanami (0.1.0)
+      dry-configurable (~> 1.0)
 
 GEM
   remote: https://rubygems.org/

@@ -31,6 +31,8 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
+  spec.add_dependency "dry-configurable", "~> 1.0"
+
   spec.add_development_dependency "hanami"
   spec.add_development_dependency "hanami-action"
   spec.add_development_dependency "hanami-router"
