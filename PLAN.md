@@ -35,8 +35,24 @@ Design is synthesized from two existing Ruby adapters:
   `response.headers`, `response[:key]=` (exposures) are all directly settable — no forced rendering step.
 - `#auto_render?(response)` returning `false` is the exact bypass point for JSON-only Inertia XHR responses (avoids
   Hanami auto-invoking the paired `Views::*` class for `X-Inertia: true` requests).
-- Layouts (`config.layout = "app"`, `app/views/layouts/app.html.erb` convention) are the analog of Rails'
+- Layouts (`config.layout = "app"`, `app/templates/layouts/app.html.erb` convention — confirmed against
+  `hanami-cli`'s app generator and `hanami-view`'s `layouts_dir`/`layout` config) are the analog of Rails'
   `application.html.erb` — used only for the **initial full-page load**, rendering `<div id="app" data-page="...">`.
+  Note: `app/views/**/*.rb` holds `Hanami::View` subclasses; ERB markup (including layouts) lives under
+  `app/templates/**`, not `app/views/**` as an earlier draft of this doc assumed.
+- View helpers meant to be callable unqualified from ERB templates/layouts (e.g. `inertia_root`) must be mixed
+  into `<App>::Views::Helpers` (`app/views/helpers.rb`), not into the `View` base class — Hanami's
+  `SliceConfiguredHelpers` auto-includes that module into the app's `Scope`/`Part` classes
+  (`hanami/extensions/view/slice_configured_helpers.rb`), whereas including into `Hanami::View` itself has no
+  effect on template scope.
+- **Action exposures do not automatically become template/layout locals.** `response[:key] = value` only reaches
+  a view template as a local if the paired `Hanami::View` subclass declares `expose :key` (or a matching instance
+  method); unexposed keys are silently dropped (`Hanami::View::Exposures#call`). Further, **the layout template
+  receives a stricter, opt-in subset of the main template's locals** — only exposures declared
+  `expose :key, layout: true` are forwarded into the layout's scope (`Exposure#for_layout?` defaults to `false`).
+  So `inertia_root(page: page)` in a layout requires `expose :page, layout: true` in the view. (Verified
+  empirically against installed `hanami-view` 3.0.2; its own YARD example implying automatic pass-through does
+  not match runtime behavior.)
 - `config/providers/*.rb` + `Hanami.app.register_provider` is where gem-level configuration
   (`version`, `ssr_url`, `component_path_resolver`, etc.) gets registered as a container component
   (`"inertia.config"`), consumed via `include Deps["inertia.config"]` — the Hanami equivalent of
@@ -90,7 +106,9 @@ lib/inertia_hanami/helper.rb                 # view helper: inertia_root(page) -
 lib/inertia_hanami/errors.rb
 lib/inertia_hanami/testing/rspec.rb          # matchers: have_props, have_exact_props, be_inertia_response, render_component...
 
-app/views/layouts/app.html.erb (generator template) -> renders <%= inertia_root(page: page) %>
+app/templates/layouts/app.html.erb (generator template) -> renders <%= inertia_root(page: page) %>
+app/views/helpers.rb                                # `include InertiaHanami::Helper` into <App>::Views::Helpers,
+                                                      #   so `inertia_root` is callable unqualified in templates
 lib/generators/inertia_hanami/install_generator.rb  # (phase 2) scaffolds provider, layout, npm deps, example page
 ```
 
@@ -157,8 +175,9 @@ lib/generators/inertia_hanami/install_generator.rb  # (phase 2) scaffolds provid
 
 ## Open questions to resolve empirically against a real Hanami 3.0 app (docs were incomplete on these)
 
-1. Exact default layout file path/naming convention in Hanami 3.0 (`app/views/layouts/app.html.erb` assumed,
-   needs confirming against a generated app).
+1. ~~Exact default layout file path/naming convention in Hanami 3.0~~ — **Resolved**: confirmed
+   `app/templates/layouts/app.html.erb` (default layout name `"app"`) against `hanami-cli`'s app generator and
+   `hanami-view`'s config; see "Target Hanami integration points" above.
 2. Whether a provider can push onto `config.middleware` at boot time, or whether middleware registration must live
    in `config/app.rb` directly (affects whether the gem can self-register middleware via an install generator vs.
    requiring a manual `config.middleware.use InertiaHanami::Middleware::Version` line).

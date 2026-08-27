@@ -3,6 +3,7 @@ PATH
   specs:
     inertia_hanami (0.1.0)
       dry-configurable (~> 1.0)
+      hanami-view (>= 2.1)
 
 GEM
   remote: https://rubygems.org/
@@ -175,7 +176,6 @@ DEPENDENCIES
   hanami
   hanami-action
   hanami-router
-  hanami-view
   inertia_hanami!
   irb
   minitest (~> 5.16)
