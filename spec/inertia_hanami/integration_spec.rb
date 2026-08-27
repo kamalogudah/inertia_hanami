@@ -21,7 +21,7 @@ RSpec.describe "full-stack request through the dummy app" do
 
       expect(page).to include(
         "component" => "Home/Show",
-        "props" => { "greeting" => "Hello from DummyApp" }
+        "props" => { "greeting" => "Hello from DummyApp", "extra" => "Extra prop" }
       )
     end
   end
@@ -32,7 +32,36 @@ RSpec.describe "full-stack request through the dummy app" do
 
       expect(last_response.headers["X-Inertia"]).to eq("true")
       page = JSON.parse(last_response.body)
-      expect(page).to include("component" => "Home/Show")
+      expect(page).to include(
+        "component" => "Home/Show",
+        "props" => { "greeting" => "Hello from DummyApp", "extra" => "Extra prop" }
+      )
+    end
+  end
+
+  context "on a partial reload (X-Inertia-Partial-Data)" do
+    it "returns only the requested props, filtering out the rest" do
+      get "/", {}, {
+        "HTTP_X_INERTIA" => "true",
+        "HTTP_X_INERTIA_PARTIAL_COMPONENT" => "Home/Show",
+        "HTTP_X_INERTIA_PARTIAL_DATA" => "greeting"
+      }
+
+      page = JSON.parse(last_response.body)
+      expect(page["props"]).to eq("greeting" => "Hello from DummyApp")
+    end
+  end
+
+  context "on a version mismatch (X-Inertia-Version doesn't match the server's)" do
+    it "responds with 409 + X-Inertia-Location instead of calling the action" do
+      get "/", {}, {
+        "HTTP_X_INERTIA" => "true",
+        "HTTP_X_INERTIA_VERSION" => "stale-version"
+      }
+
+      expect(last_response.status).to eq(409)
+      expect(last_response.headers["X-Inertia-Location"]).to end_with("/")
+      expect(last_response.body).to eq("")
     end
   end
 end

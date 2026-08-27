@@ -151,7 +151,9 @@ lib/generators/inertia_hanami/install_generator.rb  # (phase 2) scaffolds provid
 - `Renderer` + `Action` module (`inertia_render`, `inertia_share`, `#auto_render?` override).
 - `Middleware::Version`, `Middleware::Redirects`.
 - `Helper#inertia_root` + example layout template.
-- Manual end-to-end test: dummy app renders a component, partial reload works, version-mismatch 409 works.
+- ~~Manual end-to-end test: dummy app renders a component, partial reload works, version-mismatch 409 works.~~ —
+  **Verified**: `spec/inertia_hanami/integration_spec.rb` exercises all three against the dummy app (both
+  middlewares now registered via `config.middleware.use` in `spec/dummy_app/config/app.rb`).
 
 **Phase 2 — DX & polish**
 - Install generator (scaffolds provider file, layout, adds `@inertiajs/*` guidance to package.json, sample page).
