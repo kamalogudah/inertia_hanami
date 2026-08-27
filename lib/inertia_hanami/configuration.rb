@@ -10,6 +10,7 @@ module InertiaHanami
     setting :root_view, default: "app"
     setting :root_dom_id, default: "app"
     setting :component_path_resolver, default: ->(component) { component }
+    setting :always_include_errors_hash, default: false
 
     setting :ssr do
       setting :enabled, default: false

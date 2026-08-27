@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "hanami"
+require "securerandom"
 require "inertia_hanami/middleware/version"
 require "inertia_hanami/middleware/redirects"
 
@@ -10,5 +11,7 @@ module DummyApp
 
     config.middleware.use InertiaHanami::Middleware::Version
     config.middleware.use InertiaHanami::Middleware::Redirects
+
+    config.actions.sessions = :cookie, { secret: SecureRandom.hex(32) }
   end
 end
