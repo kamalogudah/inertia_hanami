@@ -46,6 +46,49 @@ Ruby/server side of the Inertia protocol.
 
 TODO: Write usage instructions here
 
+### Server-side rendering (SSR)
+
+By default, the initial page load is client-side rendered: the layout emits an empty
+`<div id="app" data-page="...">` and the JS app hydrates it in the browser. Enabling SSR renders
+that markup up front, on the server, by delegating to a separately-run Node process.
+
+Configure it in `config/providers/inertia.rb`:
+
+```ruby
+Hanami.app.register_provider(:inertia, namespace: true) do
+  # ...
+  configure do |config|
+    config.ssr.enabled = true
+    config.ssr.url = "http://localhost:13714"   # default
+    config.ssr.raise_on_error = false            # default: fall back to CSR on SSR failure
+  end
+end
+```
+
+- `ssr.enabled` - turn SSR on for full-page (non-`X-Inertia`) requests. Disabled by default.
+- `ssr.url` - base URL of the Node SSR server. `InertiaHanami::SSRRenderer` POSTs the Inertia
+  page JSON to `#{ssr.url}/render`.
+- `ssr.raise_on_error` - when the SSR server is unreachable or errors, `false` (default) silently
+  falls back to CSR for that request; `true` re-raises so the failure surfaces instead of being
+  masked.
+
+Responses are cached in-process by a digest of the page JSON, so re-rendering an unchanged page
+within the same process skips the HTTP round-trip.
+
+**Running the Node SSR server.** This gem does not run or supervise the Node process for you -
+unlike inertia-rails' bundled Puma plugin, there is no process-management integration here. Run it
+as an independent process, exposing a `POST /render` endpoint that accepts the Inertia page JSON
+and returns `{"head": "...", "body": "..."}` (an array of strings for `head` is also accepted). See
+[inertia-rails' SSR server setup](https://inertia-rails.dev/guide/server-side-rendering) for the
+JS-side implementation - the wire protocol is the same. For example, with a `package.json` script:
+
+```bash
+node ssr/server.js   # listens on the port configured via ssr.url, e.g. 13714
+```
+
+Start it alongside your Hanami app (a `Procfile` entry, systemd unit, or `foreman start` are all
+reasonable choices) before enabling `ssr.enabled` in production.
+
 ## Testing
 
 Require the RSpec matchers in your `spec/spec_helper.rb`:

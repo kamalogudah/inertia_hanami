@@ -3,8 +3,13 @@
   <head>
     <meta charset="UTF-8">
     <title>DummyApp</title>
+    <%= inertia_ssr_head(ssr_head) if ssr_head %>
   </head>
   <body>
-    <%= inertia_root(page: page) %>
+    <% if ssr_body %>
+      <%= inertia_ssr_body(ssr_body) %>
+    <% else %>
+      <%= inertia_root(page: page) %>
+    <% end %>
   </body>
 </html>

@@ -19,9 +19,10 @@ RSpec.describe InertiaHanami::Configuration do
     expect(configuration.component_path_resolver.call("Pages/Home")).to eq("Pages/Home")
   end
 
-  it "defaults ssr to disabled with a local url" do
+  it "defaults ssr to disabled with a local url and no raise on error" do
     expect(configuration.ssr.enabled).to be(false)
     expect(configuration.ssr.url).to eq("http://localhost:13714")
+    expect(configuration.ssr.raise_on_error).to be(false)
   end
 
   it "defaults always_include_errors_hash to false" do

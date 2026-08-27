@@ -15,6 +15,7 @@ module InertiaHanami
     setting :ssr do
       setting :enabled, default: false
       setting :url, default: "http://localhost:13714"
+      setting :raise_on_error, default: false
     end
   end
 end

@@ -122,5 +122,39 @@ RSpec.describe InertiaHanami::Renderer do
         "clearHistory" => false
       )
     end
+
+    context "when SSR is enabled" do
+      before do
+        allow(Hanami.app["inertia.config"].ssr).to receive(:enabled).and_return(true)
+      end
+
+      it "exposes ssr_head/ssr_body instead of :page when the SSR renderer succeeds" do
+        result = InertiaHanami::SSRRenderer::Result.new("<title>Ada</title>", "<div>Ada</div>")
+        allow(InertiaHanami::SSRRenderer.instance).to receive(:call).and_return(result)
+
+        _, response = build(component: "Users/Show", props: { name: "Ada" })
+
+        expect(response[:ssr_head]).to eq("<title>Ada</title>")
+        expect(response[:ssr_body]).to eq("<div>Ada</div>")
+        expect(response[:page]).to be_nil
+      end
+
+      it "falls back to exposing :page when the SSR renderer returns nil" do
+        allow(InertiaHanami::SSRRenderer.instance).to receive(:call).and_return(nil)
+
+        _, response = build(component: "Users/Show", props: { name: "Ada" })
+
+        expect(response[:page]).to eq(
+          "component" => "Users/Show",
+          "props" => { name: "Ada" },
+          "url" => "/users/1",
+          "version" => nil,
+          "encryptHistory" => false,
+          "clearHistory" => false
+        )
+        expect(response[:ssr_head]).to be_nil
+        expect(response[:ssr_body]).to be_nil
+      end
+    end
   end
 end

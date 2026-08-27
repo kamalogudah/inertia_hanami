@@ -5,6 +5,8 @@ module <%= namespace %>
     module InertiaExample
       class Show < <%= namespace %>::View
         expose :page, layout: true
+        expose :ssr_head, layout: true
+        expose :ssr_body, layout: true
       end
     end
   end
