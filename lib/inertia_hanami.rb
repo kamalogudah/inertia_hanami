@@ -16,3 +16,8 @@ require_relative "inertia_hanami/middleware/redirects"
 module InertiaHanami
   class Error < StandardError; end
 end
+
+# Only loaded when the `hanami` executable has already required hanami-cli
+# (e.g. this gem is placed in Bundler's `:cli` group) - adds zero runtime
+# dependency on hanami-cli for normal app boot.
+require "inertia_hanami/cli" if defined?(Hanami::CLI)

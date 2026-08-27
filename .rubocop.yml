@@ -10,3 +10,24 @@ Style/StringLiteralsInInterpolation:
 Metrics/BlockLength:
   Exclude:
     - "spec/**/*"
+
+Metrics/ClassLength:
+  Exclude:
+    - "lib/generators/**/*"
+
+Metrics/MethodLength:
+  Exclude:
+    - "lib/generators/**/*"
+    - "test/**/*"
+
+Metrics/AbcSize:
+  Exclude:
+    - "lib/generators/**/*"
+    - "test/**/*"
+
+Naming/MethodParameterName:
+  inherit_mode:
+    merge:
+      - AllowedNames
+  AllowedNames:
+    - fs
