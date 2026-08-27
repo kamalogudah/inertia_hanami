@@ -46,6 +46,45 @@ Ruby/server side of the Inertia protocol.
 
 TODO: Write usage instructions here
 
+## Testing
+
+Require the RSpec matchers in your `spec/spec_helper.rb`:
+
+```ruby
+require "inertia_hanami/testing/rspec"
+```
+
+Then, in a request spec that `include`s `Rack::Test::Methods`:
+
+```ruby
+RSpec.describe "GET /" do
+  include Rack::Test::Methods
+
+  def app = MyApp::App
+
+  it "renders the dashboard" do
+    get "/", {}, { "HTTP_X_INERTIA" => "true" }
+
+    expect(inertia).to be_inertia_response
+    expect(inertia).to render_component("Dashboard/Show")
+    expect(inertia).to have_props(name: "Ada")
+    expect(inertia).to have_exact_props(name: "Ada", role: "admin")
+    expect(inertia).to have_no_prop(:secret)
+  end
+end
+```
+
+`inertia_reload_only(*props)`, `inertia_reload_except(*props)`, and
+`inertia_load_deferred_props(group = nil)` re-issue a GET against the last request's path
+with the appropriate `X-Inertia-Partial-*` headers, so you can assert on the result of a
+partial reload:
+
+```ruby
+get "/", {}, { "HTTP_X_INERTIA" => "true" }
+inertia_reload_only("name")
+expect(inertia).to have_exact_props(name: "Ada")
+```
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
