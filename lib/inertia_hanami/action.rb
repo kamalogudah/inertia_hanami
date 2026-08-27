@@ -58,6 +58,21 @@ module InertiaHanami
         (@inertia_shared_blocks ||= []) << block if block
       end
 
+      # Class-level default for whether pages rendered by this action (and
+      # its subclasses, unless they override it) should have their Inertia
+      # history entry encrypted client-side. Falls back to the global
+      # `Hanami.app["inertia.config"].encrypt_history` default when unset
+      # anywhere in the ancestry (see `inertia_encrypt_history?`).
+      def encrypt_history(value: true)
+        @inertia_encrypt_history = value
+      end
+
+      def inertia_encrypt_history?
+        return @inertia_encrypt_history if defined?(@inertia_encrypt_history)
+
+        inherited_inertia_encrypt_history?
+      end
+
       private
 
       def inherited_inertia_shared_props
@@ -66,6 +81,10 @@ module InertiaHanami
 
       def inherited_inertia_shared_blocks
         superclass.respond_to?(:inertia_shared_blocks) ? superclass.inertia_shared_blocks : []
+      end
+
+      def inherited_inertia_encrypt_history?
+        superclass.respond_to?(:inertia_encrypt_history?) ? superclass.inertia_encrypt_history? : nil
       end
     end
 
@@ -91,8 +110,21 @@ module InertiaHanami
         (@inertia_context[:instance_shared_blocks] ||= []) << block if block
       end
 
+      # Instance-level override of the class's `encrypt_history` default,
+      # for a single action instance.
+      def encrypt_history(value: true)
+        @inertia_context[:instance_encrypt_history] = value
+      end
+
+      # Marks the next `inertia_render` call's response as `clearHistory:
+      # true`, telling the client to wipe any encrypted history it has
+      # stored (e.g. call this before redirecting on logout).
+      def clear_history
+        @inertia_context[:instance_clear_history] = true
+      end
+
       def inertia_render(component, props: {}, url: nil, version: nil,
-                         encrypt_history: false, clear_history: false)
+                         encrypt_history: inertia_history_encrypted?, clear_history: inertia_history_cleared?)
         Renderer.new(
           request: @inertia_context[:request],
           response: @inertia_context[:response],
@@ -127,6 +159,20 @@ module InertiaHanami
       end
 
       private
+
+      def inertia_history_encrypted?
+        instance_value = @inertia_context[:instance_encrypt_history]
+        return instance_value unless instance_value.nil?
+
+        class_value = self.class.inertia_encrypt_history?
+        return class_value unless class_value.nil?
+
+        Hanami.app["inertia.config"].encrypt_history
+      end
+
+      def inertia_history_cleared?
+        @inertia_context[:instance_clear_history] || false
+      end
 
       def inertia_collected_props
         props = self.class.inertia_shared_props.dup

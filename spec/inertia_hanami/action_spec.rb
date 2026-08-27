@@ -104,6 +104,106 @@ RSpec.describe InertiaHanami::Action do
     end
   end
 
+  describe "encrypted history" do
+    it "defaults encryptHistory/clearHistory to false when nothing is configured" do
+      klass = Class.new(action_class) do
+        def handle(_request, _response)
+          inertia_render("Users/Show", props: {})
+        end
+      end
+
+      _status, _headers, body = call_action(klass, headers: { "HTTP_X_INERTIA" => "true" })
+      page = JSON.parse(body)
+
+      expect(page["encryptHistory"]).to be(false)
+      expect(page["clearHistory"]).to be(false)
+    end
+
+    it "falls back to the global inertia.config encrypt_history default" do
+      Hanami.app["inertia.config"].encrypt_history = true
+
+      klass = Class.new(action_class) do
+        def handle(_request, _response)
+          inertia_render("Users/Show", props: {})
+        end
+      end
+
+      _status, _headers, body = call_action(klass, headers: { "HTTP_X_INERTIA" => "true" })
+      page = JSON.parse(body)
+
+      expect(page["encryptHistory"]).to be(true)
+    ensure
+      Hanami.app["inertia.config"].encrypt_history = false
+    end
+
+    it "uses the class-level encrypt_history macro, inherited by subclasses" do
+      klass = Class.new(action_class) do
+        encrypt_history
+
+        def handle(_request, _response)
+          inertia_render("Users/Show", props: {})
+        end
+      end
+      subclass = Class.new(klass)
+
+      _status, _headers, body = call_action(subclass, headers: { "HTTP_X_INERTIA" => "true" })
+      page = JSON.parse(body)
+
+      expect(page["encryptHistory"]).to be(true)
+    end
+
+    it "lets an instance-level encrypt_history call override the class default" do
+      klass = Class.new(action_class) do
+        encrypt_history
+
+        def handle(_request, _response)
+          encrypt_history(value: false)
+          inertia_render("Users/Show", props: {})
+        end
+      end
+
+      _status, _headers, body = call_action(klass, headers: { "HTTP_X_INERTIA" => "true" })
+      page = JSON.parse(body)
+
+      expect(page["encryptHistory"]).to be(false)
+    end
+
+    it "lets an instance-level clear_history call mark clearHistory true" do
+      klass = Class.new(action_class) do
+        def handle(_request, _response)
+          clear_history
+          inertia_render("Users/Show", props: {})
+        end
+      end
+
+      _status, _headers, body = call_action(klass, headers: { "HTTP_X_INERTIA" => "true" })
+      page = JSON.parse(body)
+
+      expect(page["clearHistory"]).to be(true)
+    end
+
+    it "lets explicit inertia_render kwargs win over class/instance/config defaults" do
+      Hanami.app["inertia.config"].encrypt_history = true
+
+      klass = Class.new(action_class) do
+        encrypt_history
+
+        def handle(_request, _response)
+          clear_history
+          inertia_render("Users/Show", props: {}, encrypt_history: false, clear_history: false)
+        end
+      end
+
+      _status, _headers, body = call_action(klass, headers: { "HTTP_X_INERTIA" => "true" })
+      page = JSON.parse(body)
+
+      expect(page["encryptHistory"]).to be(false)
+      expect(page["clearHistory"]).to be(false)
+    ensure
+      Hanami.app["inertia.config"].encrypt_history = false
+    end
+  end
+
   describe "#inertia_location" do
     it "sets a 409 + X-Inertia-Location header for an Inertia request" do
       klass = Class.new(action_class) do
