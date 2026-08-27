@@ -1,24 +1,46 @@
 # InertiaHanami
 
-TODO: Delete this and the text below, and describe your gem
-
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/inertia_hanami`. To experiment with that code, run `bin/console` for an interactive prompt.
+Server-side adapter implementing the [Inertia.js protocol](https://inertiajs.com/) for the
+[Hanami](https://hanamirb.org) web framework.
 
 ## Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
+Add the gem to your Hanami app's Gemfile in **both** the default and `:cli` groups. The `:cli`
+group is required for the `hanami generate inertia:install` command below to be available -
+Bundler's `Hanami::CLI::Bundler.require(:cli)` is what loads it before `hanami` dispatches
+commands:
 
-Install the gem and add to the application's Gemfile by executing:
-
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+gem "inertia_hanami", groups: [:default, :cli]
 ```
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+Then run:
 
 ```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+bundle install
+bundle exec hanami generate inertia:install
 ```
+
+This scaffolds:
+
+- `config/providers/inertia.rb` - registers the gem's configuration with the app container.
+- `config.middleware.use InertiaHanami::Middleware::Version` / `::Redirects` in `config/app.rb`.
+- `app/templates/layouts/app.html.erb` - the initial full-page-load layout, rendering
+  `<%= inertia_root(page: page) %>`.
+- `app/views/helpers.rb` - includes `InertiaHanami::Helper` so `inertia_root` is callable
+  unqualified from templates.
+- A sample page (`app/actions/inertia_example/show.rb`, `app/views/inertia_example/show.rb`,
+  `app/templates/inertia_example/show.html.erb`) plus a matching route in `config/routes.rb`.
+- `@inertiajs/*` frontend packages merged into `package.json` (or printed as `npm install`
+  guidance if no `package.json` exists yet).
+
+Pass `--framework=vue` or `--framework=svelte` to target a different Inertia client adapter
+(defaults to `react`), and `--force` to overwrite files it previously generated. Run
+`bundle exec hanami generate inertia:install --help` for details.
+
+Finally, run `npm install` (or yarn/pnpm) to install the frontend packages. Wiring up the JS
+entrypoint (Vite/`hanami-assets` config) is outside this gem's scope - it only manages the
+Ruby/server side of the Inertia protocol.
 
 ## Usage
 

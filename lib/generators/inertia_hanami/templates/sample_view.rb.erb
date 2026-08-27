@@ -1,0 +1,11 @@
+# frozen_string_literal: true
+
+module <%= namespace %>
+  module Views
+    module InertiaExample
+      class Show < <%= namespace %>::View
+        expose :page, layout: true
+      end
+    end
+  end
+end

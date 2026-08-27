@@ -1,0 +1,12 @@
+# auto_register: false
+# frozen_string_literal: true
+
+require "inertia_hanami/helper"
+
+module <%= namespace %>
+  module Views
+    module Helpers
+      include InertiaHanami::Helper
+    end
+  end
+end
