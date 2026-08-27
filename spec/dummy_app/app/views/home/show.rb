@@ -4,9 +4,7 @@ module DummyApp
   module Views
     module Home
       class Show < DummyApp::View
-        expose :greeting do
-          "Hello from DummyApp"
-        end
+        expose :page, layout: true
       end
     end
   end
