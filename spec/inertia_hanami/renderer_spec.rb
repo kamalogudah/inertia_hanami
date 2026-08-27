@@ -38,7 +38,7 @@ RSpec.describe InertiaHanami::Renderer do
       expect(response.headers["X-Inertia"]).to eq("true")
       expect(response.format).to eq(:json)
 
-      page = JSON.parse(response.body.first)
+      page = JSON.parse(response.body)
       expect(page).to eq(
         "component" => "Users/Show",
         "props" => { "name" => "Ada" },
@@ -57,7 +57,7 @@ RSpec.describe InertiaHanami::Renderer do
 
       _, response = build(env: { "HTTP_X_INERTIA" => "true" }, component: "Users/Show", props:)
 
-      page = JSON.parse(response.body.first)
+      page = JSON.parse(response.body)
       expect(page["deferredProps"]).to eq("charts" => ["stats"])
       expect(page["mergeProps"]).to eq(["comments"])
       expect(page["matchPropsOn"]).to eq(["comments.id"])
@@ -73,7 +73,7 @@ RSpec.describe InertiaHanami::Renderer do
         clear_history: true
       )
 
-      page = JSON.parse(response.body.first)
+      page = JSON.parse(response.body)
       expect(page["version"]).to eq("abc123")
       expect(page["encryptHistory"]).to be true
       expect(page["clearHistory"]).to be true
@@ -82,7 +82,7 @@ RSpec.describe InertiaHanami::Renderer do
     it "uses the given url instead of the request's fullpath when provided" do
       _, response = build(env: { "HTTP_X_INERTIA" => "true" }, component: "Users/Show", props: {}, url: "/custom")
 
-      page = JSON.parse(response.body.first)
+      page = JSON.parse(response.body)
       expect(page["url"]).to eq("/custom")
     end
 
@@ -96,7 +96,7 @@ RSpec.describe InertiaHanami::Renderer do
 
       _, response = build(env:, component: "Users/Show", props:)
 
-      page = JSON.parse(response.body.first)
+      page = JSON.parse(response.body)
       expect(page["props"]).to eq("user" => { "name" => "Ada" })
     end
   end

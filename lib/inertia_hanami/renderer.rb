@@ -36,7 +36,7 @@ module InertiaHanami
     def render_inertia_response
       @response.headers["X-Inertia"] = "true"
       @response.format = :json
-      @response.body = [page.to_json]
+      @response.body = page.to_json
     end
 
     def render_initial_load
