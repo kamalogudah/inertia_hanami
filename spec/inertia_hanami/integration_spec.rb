@@ -9,6 +9,10 @@ RSpec.describe "full-stack request through the dummy app" do
     Hanami.app
   end
 
+  def current_version
+    Hanami.app["inertia.config"].version
+  end
+
   context "on an initial full-page load (no X-Inertia header)" do
     it "renders the layout with the Inertia root div and the page envelope JSON-encoded" do
       get "/"
@@ -28,7 +32,7 @@ RSpec.describe "full-stack request through the dummy app" do
 
   context "on an Inertia XHR request (X-Inertia: true)" do
     it "responds with the JSON page envelope instead of HTML" do
-      get "/", {}, { "HTTP_X_INERTIA" => "true" }
+      get "/", {}, { "HTTP_X_INERTIA" => "true", "HTTP_X_INERTIA_VERSION" => current_version }
 
       expect(last_response.headers["X-Inertia"]).to eq("true")
       page = JSON.parse(last_response.body)
@@ -43,6 +47,7 @@ RSpec.describe "full-stack request through the dummy app" do
     it "returns only the requested props, filtering out the rest" do
       get "/", {}, {
         "HTTP_X_INERTIA" => "true",
+        "HTTP_X_INERTIA_VERSION" => current_version,
         "HTTP_X_INERTIA_PARTIAL_COMPONENT" => "Home/Show",
         "HTTP_X_INERTIA_PARTIAL_DATA" => "greeting"
       }

@@ -64,6 +64,8 @@ GEM
       hanami-utils (~> 3.0.0.rc)
       rack (>= 2.2.16)
       zeitwerk (~> 2.6)
+    hanami-assets (3.0.0)
+      zeitwerk (~> 2.6)
     hanami-cli (3.0.0)
       bundler (>= 2.1)
       dry-cli (~> 1.0, >= 1.4.0)
@@ -175,6 +177,7 @@ PLATFORMS
 DEPENDENCIES
   hanami
   hanami-action
+  hanami-assets
   hanami-router
   inertia_hanami!
   irb
@@ -205,6 +208,7 @@ CHECKSUMS
   erb (6.0.7) sha256=c5ca6dc25b0ef974a44dc8f59fe847577122483b1968a38dec305c60bf91ee92
   hanami (3.0.2) sha256=4fb9180c24fb1edd8932efc71848e9fe2e41e366286a0bf59a7938904a194e2b
   hanami-action (3.0.1) sha256=cacef6a80e366a0c9c3666dfd83365f3c07ac96bd7be444ceecd62df1488451d
+  hanami-assets (3.0.0) sha256=b9ce246ca12ffa8e79f71194e312a484ffbb0d8fd28582b22869706c0afbd3da
   hanami-cli (3.0.0) sha256=9d51bb7b0f0b4eaf67ea1dc8b27774428ee831647b107d2e9f6ad3317b1598ec
   hanami-router (3.0.0) sha256=2438db070c7ed7d3f28f1777fc32bdc86e7a9b744a29ab51098f4fa41408210b
   hanami-utils (3.0.1) sha256=0d46181bd86115127a04a6d0481df819eb558714ce58c6b4da7e0bb65c5dcd9b
