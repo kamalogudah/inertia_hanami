@@ -9,6 +9,11 @@ module InertiaHanami
   # Follows Hanami's own composition idiom (`include Inertia::Action`)
   # rather than requiring a subclass of a framework-specific base class.
   module Action
+    # Session key used to stash validation errors across a redirect, mirroring
+    # inertia-rails' `session[:inertia_errors]`. Cleared as soon as it's read
+    # into the next response's `errors` prop.
+    INERTIA_ERRORS_SESSION_KEY = "inertia_errors"
+
     def self.included(action_class)
       super
 
@@ -19,7 +24,24 @@ module InertiaHanami
         @inertia_context[:request] = req
         @inertia_context[:response] = res
       end
+
+      share_errors_and_flash(action_class)
     end
+
+    # Auto-shared on every request: `errors` (from the session, stashed via
+    # `share_inertia_errors`) and `flash` (from Hanami's flash). Registered
+    # before any `inertia_share` calls in the including class's own body, so
+    # those can override either key. No-ops entirely when the app hasn't
+    # enabled sessions (`session_enabled?` defaults to `false` on
+    # `Hanami::Action`).
+    def self.share_errors_and_flash(action_class)
+      action_class.inertia_share do
+        next {} unless session_enabled?
+
+        { errors: inertia_errors_prop, flash: inertia_flash_prop }.compact
+      end
+    end
+    private_class_method :share_errors_and_flash
 
     # Class-level `inertia_share` macro, inherited down subclasses.
     module ClassMethods
@@ -95,6 +117,15 @@ module InertiaHanami
         end
       end
 
+      # Stashes `errors` in the session so they surface as the `errors` prop
+      # on the next request's Inertia page (e.g. after a validation failure
+      # redirect). Analogous to inertia-rails' `redirect_to ..., inertia: {
+      # errors: ... }`.
+      def share_inertia_errors(errors)
+        hash = errors.respond_to?(:to_h) ? errors.to_h : errors
+        @inertia_context[:request].session[INERTIA_ERRORS_SESSION_KEY] = hash
+      end
+
       private
 
       def inertia_collected_props
@@ -103,6 +134,27 @@ module InertiaHanami
         props.merge!(@inertia_context[:instance_shared_props]) if @inertia_context[:instance_shared_props]
         (@inertia_context[:instance_shared_blocks] || []).each { |block| props.merge!(instance_exec(&block)) }
         props
+      end
+
+      # Reads and clears any errors stashed via `share_inertia_errors`, so
+      # they're delivered exactly once. Falls back to an empty hash when
+      # `always_include_errors_hash` is enabled, or is omitted (nil) entirely
+      # otherwise.
+      def inertia_errors_prop
+        stashed = @inertia_context[:request].session.delete(INERTIA_ERRORS_SESSION_KEY)
+        return Props::Always.new(block: -> { stashed }) if stashed
+
+        return nil unless Hanami.app["inertia.config"].always_include_errors_hash
+
+        Props::Always.new(block: -> { {} })
+      end
+
+      # Shares the current request's flash messages, when there are any.
+      def inertia_flash_prop
+        flash = @inertia_context[:response].flash.now
+        return nil if flash.empty?
+
+        Props::Always.new(block: -> { flash })
       end
     end
   end
