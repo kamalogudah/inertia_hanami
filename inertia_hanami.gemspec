@@ -36,6 +36,7 @@ Gem::Specification.new do |spec|
 
   spec.add_development_dependency "hanami"
   spec.add_development_dependency "hanami-action"
+  spec.add_development_dependency "hanami-assets"
   spec.add_development_dependency "hanami-router"
   spec.add_development_dependency "rack-test"
   spec.add_development_dependency "rspec"
