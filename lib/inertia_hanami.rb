@@ -10,6 +10,7 @@ require_relative "inertia_hanami/request_context"
 require_relative "inertia_hanami/renderer"
 require_relative "inertia_hanami/action"
 require_relative "inertia_hanami/middleware/version"
+require_relative "inertia_hanami/middleware/redirects"
 
 module InertiaHanami
   class Error < StandardError; end
