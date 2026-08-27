@@ -40,7 +40,20 @@ module InertiaHanami
     end
 
     def render_initial_load
+      if ssr_enabled?
+        result = SSRRenderer.instance.call(page)
+        if result
+          @response[:ssr_head] = result.head
+          @response[:ssr_body] = result.body
+          return
+        end
+      end
+
       @response[:page] = page
+    end
+
+    def ssr_enabled?
+      Hanami.app["inertia.config"].ssr.enabled
     end
 
     def page

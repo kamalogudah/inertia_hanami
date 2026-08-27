@@ -5,6 +5,8 @@ module DummyApp
     module Home
       class Show < DummyApp::View
         expose :page, layout: true
+        expose :ssr_head, layout: true
+        expose :ssr_body, layout: true
       end
     end
   end
