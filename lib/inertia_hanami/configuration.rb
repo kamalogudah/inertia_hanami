@@ -11,6 +11,7 @@ module InertiaHanami
     setting :root_dom_id, default: "app"
     setting :component_path_resolver, default: ->(component) { component }
     setting :always_include_errors_hash, default: false
+    setting :encrypt_history, default: false
 
     setting :ssr do
       setting :enabled, default: false

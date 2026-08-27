@@ -170,7 +170,13 @@ lib/generators/inertia_hanami/install_generator.rb  # (phase 2) scaffolds provid
   plugin) — document running the Node SSR server as a separate process.
 
 **Phase 4 — protocol completeness / parity audit**
-- Encrypted history (`encryptHistory`/`clearHistory` session flags).
+- ~~Encrypted history (`encryptHistory`/`clearHistory` session flags).~~ — **Done**: envelope
+  plumbing (`Renderer`/`Action#inertia_render` kwargs) already existed; added the sticky
+  mechanism — `Configuration#encrypt_history` global default, class-level `encrypt_history`
+  macro (inherited down subclasses), instance-level `encrypt_history`/`clear_history`
+  overrides, all resolved in `Action::InstanceMethods#inertia_history_encrypted?` /
+  `#inertia_history_cleared?`. See `spec/inertia_hanami/action_spec.rb`'s "encrypted history"
+  block and `spec/inertia_hanami/configuration_spec.rb`.
 - `Once`/scroll/infinite-scroll props if there's demand.
 - CSRF: confirm Hanami/Rack session middleware already covers the `X-XSRF-TOKEN` ↔ cookie handshake Inertia's
   client expects; add a thin bridge only if a gap is found — don't hand-roll CSRF from scratch like inertia-rage did.

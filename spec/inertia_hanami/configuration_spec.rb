@@ -28,6 +28,10 @@ RSpec.describe InertiaHanami::Configuration do
     expect(configuration.always_include_errors_hash).to be(false)
   end
 
+  it "defaults encrypt_history to false" do
+    expect(configuration.encrypt_history).to be(false)
+  end
+
   it "allows settings to be overridden per instance" do
     configuration.root_dom_id = "custom"
 
