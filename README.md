@@ -45,7 +45,157 @@ Ruby/server side of the Inertia protocol.
 
 ## Usage
 
-TODO: Write usage instructions here
+Include `InertiaHanami::Action` in an action to speak the Inertia protocol from it. This skips
+Hanami's automatic view rendering for Inertia XHR requests, renders the Inertia page envelope for
+both XHR and full-page-load requests, and gives you `inertia_render`, `inertia_share`,
+`inertia_location`, and friends:
+
+```ruby
+module MyApp
+  module Actions
+    module Dashboard
+      class Show < MyApp::Action
+        include InertiaHanami::Action
+
+        def handle(req, res)
+          inertia_render "Dashboard/Show", props: { name: "Ada" }
+        end
+      end
+    end
+  end
+end
+```
+
+`inertia_render` accepts `component:` (implicit, first positional arg), `props:`, `url:` (defaults
+to the current request URL), `version:` (defaults to the configured asset version), and
+`encrypt_history:` / `clear_history:` (see below). It's usually cleanest to include
+`InertiaHanami::Action` once in a shared base action class rather than in every action.
+
+### Sharing props across actions
+
+`inertia_share` (class-level) declares props merged into every `inertia_render` call from that
+action class and its subclasses - handy on a base action for data every page needs:
+
+```ruby
+class ApplicationAction < MyApp::Action
+  include InertiaHanami::Action
+
+  inertia_share app_name: "My App"
+
+  # Block form is instance_exec'd at render time, so it can call other
+  # action instance methods (current_user, session, etc.).
+  inertia_share do
+    { current_user: current_user&.to_h }
+  end
+end
+```
+
+Call `inertia_share` again (with or without a block) from inside `#handle` to add props scoped to
+that single request instance only, without affecting other instances of the action:
+
+```ruby
+def handle(req, res)
+  inertia_share breadcrumbs: build_breadcrumbs(req)
+  inertia_render "Posts/Show"
+end
+```
+
+Both class- and instance-level shared props are merged in before the `props:` you pass directly to
+`inertia_render`, so a per-render prop always wins over a shared one with the same key.
+
+### Errors and flash
+
+Two props are auto-shared on every `inertia_render` call (only when the app has sessions enabled):
+
+- `flash` - the current request's flash messages, when there are any.
+- `errors` - validation errors stashed via `share_inertia_errors`, delivered once and then cleared
+  from the session. Mirrors inertia-rails' `redirect_to ..., inertia: { errors: ... }`:
+
+```ruby
+def handle(req, res)
+  form = PostForm.new(req.params)
+  return inertia_render("Posts/New") if req.get?
+
+  if form.invalid?
+    share_inertia_errors(form.errors)
+    res.redirect_to(routes.path(:new_post))
+    return
+  end
+
+  # ...
+end
+```
+
+Set `config.always_include_errors_hash = true` (see Configuration below) to always send an
+`errors: {}` prop even when nothing was stashed, instead of omitting the key entirely.
+
+### External redirects
+
+Inertia's XHR-driven visits can't follow a redirect to a different origin. `inertia_location(url)`
+handles this: on an Inertia request it sets `X-Inertia-Location` and responds `409` so the client
+performs a full browser visit; on a non-Inertia request it's a normal redirect:
+
+```ruby
+def handle(req, res)
+  inertia_location("https://example.com/checkout")
+end
+```
+
+### Encrypted history
+
+When enabled, the client encrypts its Inertia history state (useful for pages with sensitive data
+you don't want recoverable via the browser's back button after logout). Set the default globally
+via `config.encrypt_history` (see Configuration below), override it per action class with
+`encrypt_history`, or per instance/request by calling the instance method inside `#handle`:
+
+```ruby
+class Settings::Show < MyApp::Action
+  include InertiaHanami::Action
+
+  encrypt_history # defaults to true; pass value: false to opt an action out
+end
+```
+
+`clear_history` marks the *next* `inertia_render` call's response as `clearHistory: true`, telling
+the client to wipe any encrypted history it has stored - call it before redirecting on logout:
+
+```ruby
+def handle(req, res)
+  clear_history
+  res.redirect_to(routes.path(:root))
+end
+```
+
+### Configuration
+
+Configured in `config/providers/inertia.rb` (scaffolded by the install generator):
+
+```ruby
+Hanami.app.register_provider(:inertia, namespace: true) do
+  start do
+    configure do |config|
+      config.version = nil                              # default: digest of assets.json, if present
+      config.root_view = "app"                           # default
+      config.root_dom_id = "app"                         # default
+      config.component_path_resolver = ->(component) { component } # default: identity
+      config.always_include_errors_hash = false           # default
+      config.encrypt_history = false                      # default
+    end
+  end
+end
+```
+
+- `version` - the asset version string sent to the client and checked against
+  `X-Inertia-Version` by `InertiaHanami::Middleware::Version` (a mismatch triggers a full reload
+  so the client picks up new assets). Defaults to a SHA256 digest of hanami-assets'
+  `assets.json` manifest when present, or `nil` otherwise.
+- `root_view` - the view rendered for the initial full-page (non-Inertia) load.
+- `root_dom_id` - the `id` of the div `inertia_root` renders, matching the client's mount point.
+- `component_path_resolver` - a callable mapping the string passed to `inertia_render` to the
+  actual client-side component path, if you want the two to differ.
+- `always_include_errors_hash` - see Errors and flash above.
+- `encrypt_history` - see Encrypted history above.
+- `ssr.*` - see Server-side rendering (SSR) below.
 
 ### Props
 
@@ -225,7 +375,7 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/inertia_hanami. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/inertia_hanami/blob/master/CODE_OF_CONDUCT.md).
+Bug reports and pull requests are welcome on GitHub at https://github.com/kamalogudah/inertia_hanami. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/kamalogudah/inertia_hanami/blob/main/CODE_OF_CONDUCT.md).
 
 ## License
 
@@ -233,4 +383,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ## Code of Conduct
 
-Everyone interacting in the InertiaHanami project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/inertia_hanami/blob/master/CODE_OF_CONDUCT.md).
+Everyone interacting in the InertiaHanami project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/kamalogudah/inertia_hanami/blob/main/CODE_OF_CONDUCT.md).
