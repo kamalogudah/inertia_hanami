@@ -22,6 +22,12 @@ module InertiaHanami
         "svelte" => %w[@inertiajs/svelte svelte]
       }.freeze
 
+      MIDDLEWARE = {
+        "version" => "Version",
+        "redirects" => "Redirects",
+        "csrf" => "Csrf"
+      }.freeze
+
       def initialize(fs:, inflector:, out:)
         @fs = fs
         @inflector = inflector
@@ -93,28 +99,36 @@ module InertiaHanami
 
         content = fs.read(app_file)
 
-        if content.include?("InertiaHanami::Middleware::Version") &&
-           content.include?("InertiaHanami::Middleware::Redirects")
+        if middleware_registered?(content)
           out.puts "      skip  config/app.rb (middleware already registered)"
           return
         end
 
-        unless content.include?('require "inertia_hanami/middleware/version"')
-          fs.inject_line_before(app_file, /^module /, 'require "inertia_hanami/middleware/version"')
-        end
-        unless content.include?('require "inertia_hanami/middleware/redirects"')
-          fs.inject_line_before(app_file, /^module /, 'require "inertia_hanami/middleware/redirects"')
-        end
-
-        fs.inject_line_at_class_bottom(
-          app_file, /class .* < Hanami::App/,
-          ["config.middleware.use InertiaHanami::Middleware::Version",
-           "config.middleware.use InertiaHanami::Middleware::Redirects"]
-        )
+        inject_middleware_requires(app_file, content)
+        fs.inject_line_at_class_bottom(app_file, /class .* < Hanami::App/, middleware_use_lines)
         out.puts "    update  config/app.rb"
       rescue Dry::Files::MissingTargetError
         out.puts "      skip  config/app.rb (unrecognized format - add the middleware manually: " \
-                 "config.middleware.use InertiaHanami::Middleware::Version / ::Redirects)"
+                 "#{middleware_use_lines.join(" / ")})"
+      end
+
+      def middleware_registered?(content)
+        MIDDLEWARE.each_value.all? { |klass| content.include?(middleware_class(klass)) }
+      end
+
+      def inject_middleware_requires(app_file, content)
+        MIDDLEWARE.each_key do |name|
+          require_line = %(require "inertia_hanami/middleware/#{name}")
+          fs.inject_line_before(app_file, /^module /, require_line) unless content.include?(require_line)
+        end
+      end
+
+      def middleware_use_lines
+        MIDDLEWARE.each_value.map { |klass| "config.middleware.use #{middleware_class(klass)}" }
+      end
+
+      def middleware_class(klass)
+        "InertiaHanami::Middleware::#{klass}"
       end
 
       def generate_layout

@@ -4,6 +4,7 @@ require "hanami"
 require "securerandom"
 require "inertia_hanami/middleware/version"
 require "inertia_hanami/middleware/redirects"
+require "inertia_hanami/middleware/csrf"
 
 module DummyApp
   class App < Hanami::App
@@ -11,6 +12,7 @@ module DummyApp
 
     config.middleware.use InertiaHanami::Middleware::Version
     config.middleware.use InertiaHanami::Middleware::Redirects
+    config.middleware.use InertiaHanami::Middleware::Csrf
 
     config.actions.sessions = :cookie, { secret: SecureRandom.hex(32) }
   end
