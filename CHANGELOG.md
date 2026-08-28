@@ -1,4 +1,4 @@
-## [Unreleased]
+## [0.1.0] - 2026-08-28
 
 - Add encrypted history support: `Configuration#encrypt_history` global default, class-level
   `encrypt_history` macro (inherited down subclasses), and instance-level `encrypt_history`/
@@ -13,6 +13,6 @@
   per the `X-Inertia-Infinite-Scroll-Merge-Intent` header) instead of replacing the existing
   prop, and reports pagination metadata via the response's `scrollProps` map.
 
-## [0.1.0] - 2026-08-20
+## [0.0.0] - 2026-08-20
 
 - Initial release
