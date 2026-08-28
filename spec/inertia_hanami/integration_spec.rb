@@ -14,13 +14,14 @@ RSpec.describe "full-stack request through the dummy app" do
   end
 
   context "on an initial full-page load (no X-Inertia header)" do
-    it "renders the layout with the Inertia root div and the page envelope JSON-encoded" do
+    it "renders the layout with the Inertia script tag, root div, and the page envelope JSON-encoded" do
       get "/"
 
       expect(last_response.status).to eq(200)
-      expect(last_response.body).to match(%r{<div id="app" data-page="([^"]*)"></div>})
+      expect(last_response.body).to match(%r{<script data-page="app" type="application/json">([^<]*)</script>})
+      expect(last_response.body).to include(%(<div id="app"></div>))
 
-      encoded = last_response.body.match(/data-page="([^"]*)"/)[1]
+      encoded = last_response.body.match(%r{<script data-page="app" type="application/json">([^<]*)</script>})[1]
       page = JSON.parse(CGI.unescapeHTML(encoded))
 
       expect(page).to include(

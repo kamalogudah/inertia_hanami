@@ -43,6 +43,36 @@ Finally, run `npm install` (or yarn/pnpm) to install the frontend packages. Wiri
 entrypoint (Vite/`hanami-assets` config) is outside this gem's scope - it only manages the
 Ruby/server side of the Inertia protocol.
 
+### Additional app setup the generator doesn't do for you
+
+- **JSON body parsing.** Inertia's client sends `application/json` request bodies for
+  `post`/`put`/`patch`/`delete` visits and form submissions (except when uploading files, which
+  switch to `multipart/form-data`). Hanami doesn't parse JSON bodies into `params` out of the box,
+  so without this, `request.params` will be empty and any `params do ... end` contract will fail
+  validation on every request. Add to `config/app.rb`:
+
+  ```ruby
+  require "hanami/middleware/body_parser"
+
+  module MyApp
+    class App < Hanami::App
+      config.middleware.use Hanami::Middleware::BodyParser, :json
+      # ...
+    end
+  end
+  ```
+
+- **Sessions.** `errors`, `flash`, and CSRF protection are all no-ops until
+  `config.actions.sessions` is configured (see [Actions - Sessions](https://hanakai.org/learn/hanami/actions/sessions/)
+  for the setup, plus a `session_secret` app setting). `InertiaHanami::Middleware::Csrf` in
+  particular does nothing useful without sessions enabled.
+
+- **Client package versions.** This gem speaks the current Inertia protocol, which as of Inertia
+  v3 embeds the initial page via a `<script data-page="app" type="application/json">` tag rather
+  than a `data-page` attribute on the root `<div>` - `inertia_root` renders both. If you pin an
+  older `@inertiajs/*` client version, check that it still reads the script-tag form; very old
+  client versions only supported the div-attribute form and won't hydrate.
+
 ## Usage
 
 Include `InertiaHanami::Action` in an action to speak the Inertia protocol from it. This skips
@@ -287,9 +317,10 @@ know about the other's naming convention.
 
 ### Server-side rendering (SSR)
 
-By default, the initial page load is client-side rendered: the layout emits an empty
-`<div id="app" data-page="...">` and the JS app hydrates it in the browser. Enabling SSR renders
-that markup up front, on the server, by delegating to a separately-run Node process.
+By default, the initial page load is client-side rendered: the layout emits a
+`<script data-page="app" type="application/json">` tag holding the page JSON plus an empty
+`<div id="app">`, and the JS app hydrates it in the browser. Enabling SSR renders that markup up
+front, on the server, by delegating to a separately-run Node process.
 
 Configure it in `config/providers/inertia.rb`:
 

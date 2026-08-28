@@ -1,3 +1,5 @@
 # frozen_string_literal: true
 
+require "inertia_hanami/provider"
+
 Hanami.app.register_provider(:inertia, namespace: true, source: InertiaHanami::Provider)

@@ -31,9 +31,9 @@ module InertiaHanami
 
     # Wraps a Rack::Test response, extracting the Inertia page envelope
     # either from the JSON body (X-Inertia XHR response) or from the
-    # `data-page` attribute rendered into the initial HTML load.
+    # `<script data-page="...">` tag rendered into the initial HTML load.
     class TestResponse
-      DATA_PAGE_REGEXP = /data-page="([^"]*)"/
+      DATA_PAGE_REGEXP = %r{<script data-page="[^"]*" type="application/json">(.*?)</script>}m
 
       def initialize(response)
         @response = response

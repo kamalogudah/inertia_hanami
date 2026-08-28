@@ -93,9 +93,16 @@ module InertiaHanami
       # Runs before the object is frozen (Hanami::Action freezes instances at
       # the end of #initialize), so @inertia_context can hold a mutable Hash
       # to stash the request/response for later use by frozen instance methods.
-      def initialize(...)
+      #
+      # Deliberately `(**kwargs)` and not `(...)`: dry-auto_inject's
+      # MethodParameters treats `(...)` as a full signature rather than a
+      # pass-through to skip past (mirroring ROM's delegation convention), so
+      # with `(...)` it stops here instead of reaching `Hanami::Action#initialize`
+      # - any `Deps[]` dependency keyword then gets forwarded all the way down
+      # and rejected as unknown. `(**kwargs)` is recognized as pass-through.
+      def initialize(**kwargs)
         @inertia_context = {}
-        super
+        super(**kwargs)
       end
 
       def auto_render?(res)
