@@ -24,7 +24,8 @@ bundle exec hanami generate inertia:install
 This scaffolds:
 
 - `config/providers/inertia.rb` - registers the gem's configuration with the app container.
-- `config.middleware.use InertiaHanami::Middleware::Version` / `::Redirects` in `config/app.rb`.
+- `config.middleware.use InertiaHanami::Middleware::Version` / `::Redirects` / `::Csrf` in
+  `config/app.rb`.
 - `app/templates/layouts/app.html.erb` - the initial full-page-load layout, rendering
   `<%= inertia_root(page: page) %>`.
 - `app/views/helpers.rb` - includes `InertiaHanami::Helper` so `inertia_root` is callable
@@ -66,7 +67,7 @@ def handle(req, res)
 
     # Resolved once and cached client-side; the client tells the server what it already has
     # via X-Inertia-Except-Once-Props, so the block isn't re-run on subsequent visits.
-    csrf_token: InertiaHanami::Props::Once.new(block: -> { session[:csrf_token] }),
+    locale_options: InertiaHanami::Props::Once.new(block: -> { available_locales }),
 
     # Merged into the existing client-side prop instead of replacing it.
     comments: InertiaHanami::Props::Merge.new(match_on: "id", block: -> { Comment.recent })
@@ -117,6 +118,22 @@ end
 - `current_page:` - the page identifier just loaded, echoed back to the client.
 - `match_on:` - same de-duping semantics as `Merge#match_on:` above; near-essential for infinite
   scroll so re-fetched items replace rather than duplicate existing ones.
+
+### CSRF protection
+
+CSRF is handled automatically once `config.actions.sessions` is configured and
+`InertiaHanami::Middleware::Csrf` is registered (both done for you by
+`hanami generate inertia:install`) - no app code required.
+
+Hanami's own `Hanami::Action::CSRFProtection` (auto-included on every action when sessions are
+enabled) stores its challenge token in the session and checks for it via an `X-CSRF-Token`
+header. Inertia's client, on the other hand, automatically reads an `XSRF-TOKEN` cookie and
+echoes it back as `X-XSRF-TOKEN` on every request - it never sends `X-CSRF-Token`. Neither side
+needs to change to talk to the other; `InertiaHanami::Middleware::Csrf` just translates between
+them: it mirrors the session's CSRF token into a readable `XSRF-TOKEN` cookie on responses, and
+copies an incoming `X-XSRF-TOKEN` header into `X-CSRF-Token` before the request reaches the
+action, so Hanami's own verification passes without either the client or the action needing to
+know about the other's naming convention.
 
 ### Server-side rendering (SSR)
 
