@@ -63,6 +63,21 @@ RSpec.describe InertiaHanami::Renderer do
       expect(page["matchPropsOn"]).to eq(["comments.id"])
     end
 
+    it "includes prependProps/scrollProps for a Scroll prop, per the merge-intent header" do
+      props = { comments: InertiaHanami::Props::Scroll.new(current_page: 1, next_page: 2, block: -> { [1, 2] }) }
+      env = { "HTTP_X_INERTIA" => "true", "HTTP_X_INERTIA_INFINITE_SCROLL_MERGE_INTENT" => "prepend" }
+
+      _, response = build(env:, component: "Users/Show", props:)
+
+      page = JSON.parse(response.body)
+      expect(page["mergeProps"]).to be_nil
+      expect(page["prependProps"]).to eq(["comments"])
+      expect(page["scrollProps"]).to eq(
+        "comments" => { "pageName" => "page", "previousPage" => nil, "nextPage" => 2, "currentPage" => 1,
+                        "reset" => false }
+      )
+    end
+
     it "passes the version and history flags through to the envelope" do
       _, response = build(
         env: { "HTTP_X_INERTIA" => "true" },

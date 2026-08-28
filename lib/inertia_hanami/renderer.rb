@@ -81,9 +81,11 @@ module InertiaHanami
       {
         "deferredProps" => resolved[:deferredProps],
         "mergeProps" => resolved[:mergeProps],
+        "prependProps" => resolved[:prependProps],
         "deepMergeProps" => resolved[:deepMergeProps],
         "matchPropsOn" => resolved[:matchPropsOn],
-        "onceProps" => resolved[:onceProps]
+        "onceProps" => resolved[:onceProps],
+        "scrollProps" => resolved[:scrollProps]
       }.compact
     end
   end

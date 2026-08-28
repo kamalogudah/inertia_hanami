@@ -4,8 +4,9 @@ module InertiaHanami
   # Decides which props actually go into an Inertia response: applies the
   # partial-reload algorithm (only/except/reset dot-paths), the AlwaysProp
   # bypass, the Optional/Defer exclusion-by-default rule, and Once-prop
-  # caching, then collects the deferredProps/mergeProps/deepMergeProps/
-  # matchPropsOn/onceProps metadata the client needs.
+  # caching, then collects the deferredProps/mergeProps/prependProps/
+  # deepMergeProps/matchPropsOn/onceProps/scrollProps metadata the client
+  # needs.
   #
   # Operates on the already-evaluated output of PropEvaluator (a Hash whose
   # leaves are plain values or Props::Base instances with resolved,
@@ -16,6 +17,7 @@ module InertiaHanami
   # protocol_builder.rb, the originally intended porting source, isn't
   # available as a dependency here), adapted to this repo's Data-based Props
   # wrappers.
+  # rubocop:disable Metrics/ClassLength -- one small dedicated transform_* method per prop type
   class ProtocolBuilder
     # Sentinel returned by #transform to signal a filtered-out prop, so a
     # Hash node can tell "excluded" apart from a legitimately nil value.
@@ -23,17 +25,21 @@ module InertiaHanami
     private_constant :DROP
 
     # `partial` bundles the X-Inertia-Partial-* / X-Inertia-Reset /
-    # X-Inertia-Except-Once-Props header values (already split into arrays
-    # by the caller): :component, :only, :except, :reset, :except_once.
+    # X-Inertia-Except-Once-Props / X-Inertia-Infinite-Scroll-Merge-Intent
+    # header values (already split into arrays by the caller, except
+    # :scroll_intent which is a single raw value): :component, :only,
+    # :except, :reset, :except_once, :scroll_intent.
     def initialize(component:, props:, partial: {})
       @component = component
       @props = props
       assign_partial(partial)
       @deferred_props = Hash.new { |hash, key| hash[key] = [] }
       @merge_props = []
+      @prepend_props = []
       @deep_merge_props = []
       @match_props_on = []
       @once_props = {}
+      @scroll_props = {}
     end
 
     def call
@@ -41,9 +47,11 @@ module InertiaHanami
         props: transform(@props, []),
         deferredProps: presence(@deferred_props.transform_values(&:sort)),
         mergeProps: presence(@merge_props),
+        prependProps: presence(@prepend_props),
         deepMergeProps: presence(@deep_merge_props),
         matchPropsOn: presence(@match_props_on),
-        onceProps: presence(@once_props)
+        onceProps: presence(@once_props),
+        scrollProps: presence(@scroll_props)
       }.compact
     end
 
@@ -55,15 +63,26 @@ module InertiaHanami
       @except = partial[:except] || []
       @reset = partial[:reset] || []
       @except_once = partial[:except_once] || []
+      @scroll_intent = partial[:scroll_intent] || "append"
     end
+
+    # Maps a node's class to the transform method that handles it, so
+    # #transform stays a flat dispatch instead of an if/elsif chain.
+    TRANSFORMERS = {
+      Props::Once => :transform_once,
+      Props::Scroll => :transform_scroll,
+      Props::Merge => :transform_merge,
+      Props::Defer => :transform_defer,
+      Props::Optional => :transform_optional
+    }.freeze
+    private_constant :TRANSFORMERS
 
     def transform(node, path)
       return transform_hash(node, path) if node.is_a?(Hash)
       return node.resolve if node.is_a?(Props::Always)
-      return transform_once(node, path) if node.is_a?(Props::Once)
-      return transform_merge(node, path) if node.is_a?(Props::Merge)
-      return transform_defer(node, path) if node.is_a?(Props::Defer)
-      return transform_optional(node, path) if node.is_a?(Props::Optional)
+
+      transformer = TRANSFORMERS[node.class]
+      return send(transformer, node, path) if transformer
 
       transform_plain(node, path)
     end
@@ -102,13 +121,37 @@ module InertiaHanami
     def transform_once(node, path)
       dot_path = path.join(".")
       key = node.key || dot_path
-      reset_requested = @reset.include?(dot_path) || @reset.include?(key)
-      already_cached = @except_once.include?(key) || @except_once.include?(dot_path)
-      return DROP if !reset_requested && already_cached
+      return DROP if once_cache_hit?(node, dot_path, key)
       return DROP unless keep_prop?(path)
 
-      @once_props[key] = { "expiresAt" => node.expires_at, "fresh" => node.fresh }.compact
+      @once_props[key] = { "prop" => dot_path, "expiresAt" => node.expires_at }.compact
       node.resolve
+    end
+
+    def once_cache_hit?(node, dot_path, key)
+      reset_requested = @reset.include?(dot_path) || @reset.include?(key)
+      already_cached = !node.fresh && (@except_once.include?(key) || @except_once.include?(dot_path))
+      !reset_requested && already_cached
+    end
+
+    def transform_scroll(node, path)
+      return DROP unless keep_prop?(path)
+
+      dot_path = path.join(".")
+      (@scroll_intent == "prepend" ? @prepend_props : @merge_props) << dot_path
+      @match_props_on << "#{dot_path}.#{node.match_on}" if node.match_on
+      @scroll_props[dot_path] = scroll_metadata(node, dot_path)
+      node.resolve
+    end
+
+    def scroll_metadata(node, dot_path)
+      {
+        "pageName" => node.page_name,
+        "previousPage" => node.previous_page,
+        "nextPage" => node.next_page,
+        "currentPage" => node.current_page,
+        "reset" => @reset.include?(dot_path)
+      }
     end
 
     # Optional/Defer: only included when a partial reload explicitly names
@@ -147,4 +190,5 @@ module InertiaHanami
       collection.nil? || collection.empty? ? nil : collection
     end
   end
+  # rubocop:enable Metrics/ClassLength
 end

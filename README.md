@@ -46,6 +46,78 @@ Ruby/server side of the Inertia protocol.
 
 TODO: Write usage instructions here
 
+### Props
+
+Wrap a value in one of `InertiaHanami::Props`' wrapper classes to control how it's resolved and
+included in the response. There's no factory-method DSL - construct them directly with `.new`:
+
+```ruby
+def handle(req, res)
+  inertia_render "Users/Index", props: {
+    # Only sent when explicitly requested via a partial reload (`only:`).
+    stats: InertiaHanami::Props::Optional.new(block: -> { expensive_stats }),
+
+    # Always sent, even during a partial reload that would otherwise exclude it.
+    permissions: InertiaHanami::Props::Always.new(block: -> { current_user.permissions }),
+
+    # Loaded in a follow-up request after the initial page load. Props sharing the same
+    # `group:` (default `"default"`) are batched into one follow-up request.
+    notifications: InertiaHanami::Props::Defer.new(group: "sidebar", block: -> { fetch_notifications }),
+
+    # Resolved once and cached client-side; the client tells the server what it already has
+    # via X-Inertia-Except-Once-Props, so the block isn't re-run on subsequent visits.
+    csrf_token: InertiaHanami::Props::Once.new(block: -> { session[:csrf_token] }),
+
+    # Merged into the existing client-side prop instead of replacing it.
+    comments: InertiaHanami::Props::Merge.new(match_on: "id", block: -> { Comment.recent })
+  }
+end
+```
+
+- `Once#key:` - the cache key reported in `onceProps`; defaults to the prop's dot-path.
+- `Once#fresh:` - when `true`, always re-resolves and re-sends the prop even if the client
+  reports it as cached (bypasses `X-Inertia-Except-Once-Props`). Defaults to `false`.
+- `Once#expires_in:` - a number of seconds after which the client should treat its cached copy
+  as stale and ask for it again. Defaults to `nil` (never expires).
+- `Merge#deep_merge:` - deep-merges Hashes instead of the default shallow/array-append merge.
+- `Merge#match_on:` - a dot-path (relative to the prop) identifying items by key during a merge,
+  so updates replace existing items instead of duplicating them (e.g. `"id"` for an array of
+  records).
+
+#### Infinite scroll
+
+`InertiaHanami::Props::Scroll` drives the client's infinite-scroll feature: it merges into the
+existing client-side prop (appending on `fetchNext`, prepending on `fetchPrevious`, per the
+`X-Inertia-Infinite-Scroll-Merge-Intent` request header the client sends) and reports pagination
+metadata via the response's `scrollProps` map, which the client reads to know whether there's a
+next/previous page to fetch:
+
+```ruby
+def handle(req, res)
+  page = req.params[:page].to_i.nonzero? || 1
+  paginated = Post.page(page)
+
+  inertia_render "Posts/Index", props: {
+    posts: InertiaHanami::Props::Scroll.new(
+      match_on: "id",
+      current_page: paginated.current_page,
+      previous_page: paginated.prev_page,
+      next_page: paginated.next_page,
+      block: -> { paginated.to_a }
+    )
+  }
+end
+```
+
+- `page_name:` - the request param name the client increments as it scrolls (defaults to
+  `"page"`; must match the param your action reads, `req.params[:page]` above).
+- `previous_page:` / `next_page:` - the page identifier to request next in each direction, or
+  `nil` when there's nothing more to load in that direction (the client stops fetching once
+  `nil`).
+- `current_page:` - the page identifier just loaded, echoed back to the client.
+- `match_on:` - same de-duping semantics as `Merge#match_on:` above; near-essential for infinite
+  scroll so re-fetched items replace rather than duplicate existing ones.
+
 ### Server-side rendering (SSR)
 
 By default, the initial page load is client-side rendered: the layout emits an empty

@@ -76,5 +76,17 @@ RSpec.describe InertiaHanami::PropEvaluator do
       expect(result.fresh).to be(true)
       expect(result.expires_in).to eq(60)
     end
+
+    it "preserves Scroll#match_on and pagination fields after evaluation" do
+      prop = InertiaHanami::Props::Scroll.new(
+        match_on: "id", next_page: 2, current_page: 1, block: -> { greeting }
+      )
+
+      result = evaluator.evaluate(prop)
+
+      expect(result.match_on).to eq("id")
+      expect(result.next_page).to eq(2)
+      expect(result.current_page).to eq(1)
+    end
   end
 end
