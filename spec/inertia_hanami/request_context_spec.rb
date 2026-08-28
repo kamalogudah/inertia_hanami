@@ -64,10 +64,17 @@ RSpec.describe InertiaHanami::RequestContext do
       expect(context.reset).to eq(["token"])
     end
 
+    it "splits X-Inertia-Except-Once-Props into #except_once" do
+      context = build("HTTP_X_INERTIA_EXCEPT_ONCE_PROPS" => "token,other")
+
+      expect(context.except_once).to eq(%w[token other])
+    end
+
     it "returns [] when the header is absent" do
       expect(build({}).partial_only).to eq([])
       expect(build({}).partial_except).to eq([])
       expect(build({}).reset).to eq([])
+      expect(build({}).except_once).to eq([])
     end
 
     it "returns [] when the header is an empty string" do
@@ -79,20 +86,34 @@ RSpec.describe InertiaHanami::RequestContext do
     end
   end
 
+  describe "#scroll_intent" do
+    it "returns the raw X-Inertia-Infinite-Scroll-Merge-Intent header value" do
+      expect(build("HTTP_X_INERTIA_INFINITE_SCROLL_MERGE_INTENT" => "prepend").scroll_intent).to eq("prepend")
+    end
+
+    it "returns nil when absent" do
+      expect(build({}).scroll_intent).to be_nil
+    end
+  end
+
   describe "#partial_params" do
     it "bundles the partial-reload fields under the keys ProtocolBuilder expects" do
       context = build(
         "HTTP_X_INERTIA_PARTIAL_COMPONENT" => "Users/Show",
         "HTTP_X_INERTIA_PARTIAL_DATA" => "user.name",
         "HTTP_X_INERTIA_PARTIAL_EXCEPT" => "user.secret",
-        "HTTP_X_INERTIA_RESET" => "token"
+        "HTTP_X_INERTIA_RESET" => "token",
+        "HTTP_X_INERTIA_EXCEPT_ONCE_PROPS" => "cached",
+        "HTTP_X_INERTIA_INFINITE_SCROLL_MERGE_INTENT" => "prepend"
       )
 
       expect(context.partial_params).to eq(
         component: "Users/Show",
         only: ["user.name"],
         except: ["user.secret"],
-        reset: ["token"]
+        reset: ["token"],
+        except_once: ["cached"],
+        scroll_intent: "prepend"
       )
     end
 

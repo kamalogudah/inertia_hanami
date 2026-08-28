@@ -52,5 +52,17 @@ module InertiaHanami
         super
       end
     end
+
+    # A prop driving the client's infinite-scroll feature: merged (appended
+    # or prepended, per the X-Inertia-Infinite-Scroll-Merge-Intent header)
+    # instead of replacing the existing client-side prop, with pagination
+    # metadata surfaced via the response's `scrollProps` map.
+    Scroll = Base.define(:block, :match_on, :page_name, :previous_page, :next_page, :current_page) do
+      # rubocop:disable Metrics/ParameterLists -- one kwarg per client-visible scrollProps field
+      def initialize(block:, match_on: nil, page_name: "page", previous_page: nil, next_page: nil, current_page: nil)
+        super
+      end
+      # rubocop:enable Metrics/ParameterLists
+    end
   end
 end

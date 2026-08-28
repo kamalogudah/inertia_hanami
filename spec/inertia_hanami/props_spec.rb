@@ -1,13 +1,14 @@
 # frozen_string_literal: true
 
 RSpec.describe InertiaHanami::Props do
-  it "resolves Optional, Always, Defer, Once, and Merge props by calling their block" do
+  it "resolves Optional, Always, Defer, Once, Merge, and Scroll props by calling their block" do
     [
       InertiaHanami::Props::Optional,
       InertiaHanami::Props::Always,
       InertiaHanami::Props::Defer,
       InertiaHanami::Props::Once,
-      InertiaHanami::Props::Merge
+      InertiaHanami::Props::Merge,
+      InertiaHanami::Props::Scroll
     ].each do |klass|
       prop = klass.new(block: -> { "value" })
 
@@ -53,6 +54,18 @@ RSpec.describe InertiaHanami::Props do
 
       expect(prop.deep_merge).to be(false)
       expect(prop.match_on).to be_nil
+    end
+  end
+
+  describe InertiaHanami::Props::Scroll do
+    it "defaults match_on/pagination fields, with page_name defaulting to 'page'" do
+      prop = described_class.new(block: -> {})
+
+      expect(prop.match_on).to be_nil
+      expect(prop.page_name).to eq("page")
+      expect(prop.previous_page).to be_nil
+      expect(prop.next_page).to be_nil
+      expect(prop.current_page).to be_nil
     end
   end
 

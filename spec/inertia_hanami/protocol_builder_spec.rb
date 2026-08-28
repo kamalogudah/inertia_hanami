@@ -25,7 +25,7 @@ RSpec.describe InertiaHanami::ProtocolBuilder do
       result = build(props)
 
       expect(result[:props]).to eq(token: "abc")
-      expect(result[:onceProps]).to match("token" => { "expiresAt" => kind_of(Integer), "fresh" => false })
+      expect(result[:onceProps]).to match("token" => { "prop" => "token", "expiresAt" => kind_of(Integer) })
     end
 
     it "records Merge props in mergeProps/deepMergeProps/matchPropsOn" do
@@ -127,6 +127,15 @@ RSpec.describe InertiaHanami::ProtocolBuilder do
       expect(result[:onceProps]).to be_nil
     end
 
+    it "re-resolves a fresh Once prop even if it's in except_once" do
+      props = { token: InertiaHanami::Props::Once.new(fresh: true, block: -> { "abc" }) }
+
+      result = build(props, component: "Users/Show", except_once: ["token"])
+
+      expect(result[:props]).to eq(token: "abc")
+      expect(result[:onceProps]).to eq("token" => { "prop" => "token" })
+    end
+
     it "prunes a plain nested hash down to its surviving children" do
       props = { user: { name: "Ada", email: "ada@example.com" }, other: "dropped" }
 
@@ -134,6 +143,49 @@ RSpec.describe InertiaHanami::ProtocolBuilder do
 
       expect(result[:props][:user]).to eq(name: "Ada")
       expect(result[:props]).not_to have_key(:other)
+    end
+  end
+
+  describe "Scroll props (infinite scroll)" do
+    it "defaults to appending, with pagination metadata in scrollProps" do
+      props = {
+        comments: InertiaHanami::Props::Scroll.new(
+          match_on: "id", previous_page: nil, next_page: 2, current_page: 1, block: -> { [1, 2] }
+        )
+      }
+
+      result = build(props)
+
+      expect(result[:props]).to eq(comments: [1, 2])
+      expect(result[:mergeProps]).to eq(["comments"])
+      expect(result[:prependProps]).to be_nil
+      expect(result[:matchPropsOn]).to eq(["comments.id"])
+      expect(result[:scrollProps]).to eq(
+        "comments" => {
+          "pageName" => "page",
+          "previousPage" => nil,
+          "nextPage" => 2,
+          "currentPage" => 1,
+          "reset" => false
+        }
+      )
+    end
+
+    it "routes into prependProps when the merge-intent is 'prepend'" do
+      props = { comments: InertiaHanami::Props::Scroll.new(block: -> { [1, 2] }) }
+
+      result = build(props, scroll_intent: "prepend")
+
+      expect(result[:mergeProps]).to be_nil
+      expect(result[:prependProps]).to eq(["comments"])
+    end
+
+    it "marks scrollProps reset: true when the path is in X-Inertia-Reset" do
+      props = { comments: InertiaHanami::Props::Scroll.new(block: -> { [1, 2] }) }
+
+      result = build(props, reset: ["comments"])
+
+      expect(result[:scrollProps]["comments"]["reset"]).to be(true)
     end
   end
 end
