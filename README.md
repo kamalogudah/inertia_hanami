@@ -398,6 +398,12 @@ inertia_reload_only("name")
 expect(inertia).to have_exact_props(name: "Ada")
 ```
 
+## Example applications
+
+- [book_react_hanami](https://github.com/kamalogudah/book_react_hanami) - React
+- [book_svelte_hanami](https://github.com/kamalogudah/book_svelte_hanami) - Svelte
+- [book_vue_hanami](https://github.com/kamalogudah/book_vue_hanami) - Vue
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
