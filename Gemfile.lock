@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    inertia_hanami (0.1.0)
+    inertia_hanami (0.1.1)
       dry-configurable (~> 1.0)
       hanami-view (>= 2.1)
 
@@ -213,7 +213,7 @@ CHECKSUMS
   hanami-router (3.0.0) sha256=2438db070c7ed7d3f28f1777fc32bdc86e7a9b744a29ab51098f4fa41408210b
   hanami-utils (3.0.1) sha256=0d46181bd86115127a04a6d0481df819eb558714ce58c6b4da7e0bb65c5dcd9b
   hanami-view (3.0.2) sha256=b145c23a720e76b05f178ef087340ffe27ea00495ec4d4a53bd1bd391fbb0592
-  inertia_hanami (0.1.0)
+  inertia_hanami (0.1.1)
   io-console (0.9.2) sha256=efa74f891dd03c0939a931dfc6e74c2813d904763d456ea9762b0525e748db08
   irb (1.18.0) sha256=de9454a0703a54704b9811a5ef31a60c86949fbf4013fcf244fabc7c775248e3
   json (2.21.2) sha256=1f1d3b7cf2b3ba1a69beca0bb6db13d5438b80bff3cd54cdaaa620b9b07c1c6a
